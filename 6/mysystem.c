@@ -9,19 +9,22 @@ int mysystem(const char *cmd) {
     pid_t pid; 
     int status, i = 0;
 
+    if (cmd == NULL)
+        return 1;
+
     pid = fork();
 
     if (pid == 0) {
         execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
-        
+        _exit(127);
     }
     else if (pid > 0 ) {
         waitpid(pid, &status, 0);
     }
     else {
-        perror("fort failed:");
+        status = -1;
     }
-   
+    return status;
 }
 
 int main(int argc, char *argv[]) {
