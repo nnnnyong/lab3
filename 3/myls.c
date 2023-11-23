@@ -41,9 +41,6 @@ void ls(char *dirname) {
     printf("\n");
 }
 int main(int argc, char *argv[]) {
-    DIR *pdir;
-    struct dirent *pde;
-    
     if (argc != 2) {
         fprintf(stderr, "Usage: myls dir_name\n");
         exit(1);
