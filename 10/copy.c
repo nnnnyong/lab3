@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
+#include <wait.h>
 #include <sys/ipc.h>
 #include <fcntl.h>
 #include <string.h>
@@ -21,7 +22,7 @@ void shm_sem(int semid, void *shmaddr, int d);
 // void shmwrite_sem(int semid, void *shmaddr);
 void p(int semid);
 void v(int semid);
-int read_shm(void *shmaddr);
+void read_shm(void *shmaddr);
 void write_shm(void *shmaddr);
 
 int main() {
@@ -68,8 +69,6 @@ int main() {
         exit(1);
     }
 
-    
-    strcpy((char *)shmaddr, "\0");
     pid = fork();
     if (pid == 0) {
         while ((nread = read(rfd, frbuffer, BUFFSIZE)) > 0) {
@@ -78,7 +77,8 @@ int main() {
         exit(0);
     }
     else if (pid) {
-        shm_sem(semid, shmaddr, 0);
+        while(waitpid(pid, (int *)0, WNOHANG))
+            shm_sem(semid, shmaddr, 0);
     }
     else {
         perror("fork failed");
@@ -101,19 +101,14 @@ int main() {
 }
 
 void shm_sem(int semid, void *shmaddr, int d) {
-    int r;
-    if (d == 0) {
-        while (1) {
-            p(semid);
-            r = read_shm(shmaddr);    
-            v(semid);
-            if (r == 1)
-                break;
-        }
+    if (d) {
+        p(semid); 
+        read_shm(shmaddr); 
+        v(semid);
     }
     else {
         p(semid);
-            write_shm(shmaddr);
+        write_shm(shmaddr); 
         v(semid);
     }
 }
@@ -139,7 +134,7 @@ void p(int semid) {
     struct sembuf pbuf;
     pbuf.sem_num = 0;
     pbuf.sem_op = -1;
-    pbuf.sem_flg = SEM_UNDO;
+    pbuf.sem_flg = 0;
 
     if (semop(semid, &pbuf, 1) == -1) {
         perror("semop failed");
@@ -151,7 +146,7 @@ void v(int semid) {
     struct sembuf vbuf;
     vbuf.sem_num = 0;
     vbuf.sem_op = 1;
-    vbuf.sem_flg = SEM_UNDO;
+    vbuf.sem_flg = 0;
 
     if (semop(semid, &vbuf, 1) == -1) {
         perror("semop failed");
@@ -159,18 +154,12 @@ void v(int semid) {
     }
 }
 
-int read_shm(void *shmaddr) {
+void read_shm(void *shmaddr) {
     int i;
-    int len;
 
-    if ((strcmp((char *)shmaddr, "\0") == 0))
-        return 1;
     for (i = 0; i < strlen((char *)shmaddr); i++) {
         fwbuffer[i] = ((char *)shmaddr)[i];
     }
-
-    strcpy((char *)shmaddr, "\0");
-    return 0;
 }
 
 void write_shm(void *shmaddr) {

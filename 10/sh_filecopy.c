@@ -29,6 +29,7 @@ int main() {
     void *shmaddr;
     pid_t pid;
     size_t nread;
+    int s;
 
     union semun {
         int value;
@@ -76,8 +77,8 @@ int main() {
         exit(0);
     }
     else if (pid) {
-        while(waitpid(pid, (int *)0, WNOHANG) == 0)
-            shmread_sem(semid, shmaddr);
+            if (waitpid(pid, (int *)0, WNOHANG) == 0)
+                shmread_sem(semid, shmaddr);
     }
     else {
         perror("fork failed");
@@ -107,12 +108,12 @@ void shmwrite_sem(int semid, void *shmaddr) {
 
 void shmread_sem(int semid, void *shmaddr) {
     int len, i;
-    if ((len = strlen((char *)shmaddr)) == 0)
-        return;
-    
     while(1) {
         p(semid);
             
+        if ((len = strlen((char *)shmaddr)) == 0)
+            return;
+    
         for (i = 0; i < strlen((char *)shmaddr); i++) {
             fwbuffer[i] = ((char *)shmaddr)[i];
         }
@@ -126,7 +127,7 @@ void p(int semid) {
     struct sembuf pbuf;
     pbuf.sem_num = 0;
     pbuf.sem_op = -1;
-    pbuf.sem_flg = SEM_UNDO;
+    pbuf.sem_flg = IPC_NOWAIT;
 
     if (semop(semid, &pbuf, 1) == -1) {
         perror("semop failed");
@@ -138,7 +139,7 @@ void v(int semid) {
     struct sembuf vbuf;
     vbuf.sem_num = 0;
     vbuf.sem_op = 1;
-    vbuf.sem_flg = SEM_UNDO;
+    vbuf.sem_flg = IPC_NOWAIT;
 
     if (semop(semid, &vbuf, 1) == -1) {
         perror("semop failed");
