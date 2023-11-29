@@ -8,7 +8,6 @@
 int mysystem(const char *cmd) {
     pid_t pid; 
     int status, i = 0;
-
     if (cmd == NULL)
         return 1;
 
