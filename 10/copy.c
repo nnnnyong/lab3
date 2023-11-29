@@ -19,7 +19,6 @@ char frbuffer[BUFFSIZE];
 char fwbuffer[BUFFSIZE];
 
 void shm_sem(int semid, void *shmaddr, int d);
-// void shmwrite_sem(int semid, void *shmaddr);
 void p(int semid);
 void v(int semid);
 void read_shm(void *shmaddr);
@@ -77,7 +76,7 @@ int main() {
         exit(0);
     }
     else if (pid) {
-        while(waitpid(pid, (int *)0, WNOHANG))
+        while(waitpid(pid, (int *)0, WNOHANG) == 0)
             shm_sem(semid, shmaddr, 0);
     }
     else {
@@ -113,28 +112,11 @@ void shm_sem(int semid, void *shmaddr, int d) {
     }
 }
 
-/*void shmread_sem(int semid, void *shmaddr) {
-    int len, i;
-    if ((len = strlen((char *)shmaddr)) == 0)
-        return;
-    
-    while(1) {
-        p(semid);
-            
-        for (i = 0; i < strlen((char *)shmaddr); i++) {
-            fwbuffer[i] = ((char *)shmaddr)[i];
-        }
-
-        strcpy((char *)shmaddr, "\0");
-        v(semid);
-    }
-}*/
-
 void p(int semid) {
     struct sembuf pbuf;
     pbuf.sem_num = 0;
     pbuf.sem_op = -1;
-    pbuf.sem_flg = 0;
+    pbuf.sem_flg = SEM_UNDO;
 
     if (semop(semid, &pbuf, 1) == -1) {
         perror("semop failed");
@@ -146,7 +128,7 @@ void v(int semid) {
     struct sembuf vbuf;
     vbuf.sem_num = 0;
     vbuf.sem_op = 1;
-    vbuf.sem_flg = 0;
+    vbuf.sem_flg = SEM_UNDO;
 
     if (semop(semid, &vbuf, 1) == -1) {
         perror("semop failed");
